@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import sqlite3
 import csv
+from generate_android_pass import generate_android_pass
+
 
 # Connect to the database and get event names
 def get_event_names():
@@ -11,6 +13,7 @@ def get_event_names():
     events = [row[0] for row in cursor.fetchall()]
     conn.close()
     return events
+
 
 # Add new event to the database
 def add_new_event():
@@ -25,8 +28,10 @@ def add_new_event():
         refresh_event_list()
         event_var.set(new_event)
 
+
 def refresh_event_list():
     event_menu['values'] = get_event_names()
+
 
 # Load CSV and display data
 def load_csv():
@@ -79,6 +84,7 @@ def load_csv():
     conn.close()
     messagebox.showinfo("Success", "CSV imported successfully.")
 
+
 # Save changes to ticket types
 def save_changes():
     conn = sqlite3.connect("event_tickets.db")
@@ -98,6 +104,7 @@ def save_changes():
     conn.commit()
     conn.close()
     messagebox.showinfo("Success", "Ticket types updated.")
+
 
 # Handle ticket type changes
 def on_double_click(event):
@@ -122,6 +129,37 @@ def on_double_click(event):
 
             entry_popup.bind("<<ComboboxSelected>>", on_select)
             entry_popup.bind("<FocusOut>", lambda e: entry_popup.destroy())
+
+
+def send_passes():
+    selected_event = event_var.get()
+    if not selected_event:
+        messagebox.showerror("Error", "Please select an event first")
+        return
+
+    for item in tree.get_children():
+        name, phone, email, ticket_type = tree.item(item)["values"]
+
+        conn = sqlite3.connect("event_tickets.db")
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT barcode FROM Tickets t
+            JOIN Attendees a ON t.attendee_id = a.attendee_id
+            JOIN EVENTS e ON t.event_id = e.event_id
+            WHERE a.name = ? AND a.phone = ? AND e.name = ?
+        """, (name, phone, selected_event))
+        result = cursor.fetchone()
+        conn.close()
+
+        if not result:
+            messagebox.showerror("Error", f"No barcode found for {name}")
+            continue
+
+        barcode = result[0]
+        generate_android_pass(name, selected_event, ticket_type, barcode, email, phone)
+
+    messagebox.showinfo("Success", "All passes are generated and emailed!")
+
 
 # Initialize window
 root = tk.Tk()
@@ -154,5 +192,7 @@ tree.bind("<Double-1>", on_double_click)
 
 # Save changes button
 tk.Button(root, text="Save Changes", command=save_changes).pack(pady=5)
+# Send Button
+tk.Button(root, text="Send Passes", command=send_passes).pack(pady=5)
 
 root.mainloop()

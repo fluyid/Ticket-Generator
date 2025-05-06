@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS Tickets (
     ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
     attendee_id INTEGER,
     event_id INTEGER,
-    ticket_type TEXT CHECK(ticket_type IN ('WVIP', 'VIP', 'Normal', 'Staff')) NOT NULL,
+    ticket_type TEXT CHECK(ticket_type IN ('VVIP', 'VIP', 'Normal', 'Staff')) NOT NULL,
     barcode TEXT UNIQUE NOT NULL,
     pass_design TEXT,
     FOREIGN KEY(attendee_id) REFERENCES Attendees(attendee_id),
